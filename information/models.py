@@ -129,7 +129,6 @@ def send_contact_email(sender, instance, **kwargs):
     Best regards,
     Family Cladding
     """
-    sender_email = 'support@ludmilpaulo.co.za'  # Replace with your sender email
+    sender_email = settings.EMAIL_HOST_USER  # Use the email host user as the sender
     recipient_email = instance.email
     send_mail(subject, message, sender_email, [recipient_email])
-
