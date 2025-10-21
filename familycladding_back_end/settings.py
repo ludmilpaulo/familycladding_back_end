@@ -10,12 +10,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-9e(xuok5di4ku(hasr2o+v9!tx_^c7acxc4wmgg(qpc&v1cucb'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-9e(xuok5di4ku(hasr2o+v9!tx_^c7acxc4wmgg(qpc&v1cucb')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,lopes.pythonanywhere.com').split(',')
 
 
 
@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'projects',
     'services',
     'testimony',
+    'invoices',
     'ckeditor',
 ]
 
@@ -69,12 +70,25 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'familycladding_back_end.wsgi.application'
 
-CORS_ORIGIN_ALLOW_ALL = True
-
+# CORS settings
+CORS_ORIGIN_ALLOW_ALL = DEBUG  # Only allow all origins in development
 CORS_ALLOWED_ORIGINS = [
-    'http://*',
-    'https://*',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'https://lopes.pythonanywhere.com',
 ]
+
+# Security settings for production
+if not DEBUG:
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    X_FRAME_OPTIONS = 'DENY'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
@@ -82,8 +96,30 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        'OPTIONS': {
+            'timeout': 20,
+        }
     }
 }
+
+# Database connection optimization
+DATABASE_CONNECTION_MAX_AGE = 60
+
+# Cache configuration
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+        'TIMEOUT': 300,  # 5 minutes
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+        }
+    }
+}
+
+# Session configuration
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
+SESSION_CACHE_ALIAS = 'default'
 
 
 # Password validation
@@ -126,8 +162,8 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, "statics"),
-]
+    os.path.join(BASE_DIR, "static"),
+] if os.path.exists(os.path.join(BASE_DIR, "static")) else []
 
 STATIC_ROOT = os.path.join(BASE_DIR, "static_cdn", "static_root")
 
@@ -142,6 +178,28 @@ LOGIN_REDIRECT_URL = '/'
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Django REST Framework settings
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.MultiPartParser',
+        'rest_framework.parsers.FormParser',
+    ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/hour',
+        'user': '1000/hour'
+    }
+}
 
 
 SERVER_EMAIL = 'support@ludmilpaulo.co.za' # this is for to send 500 mail to admins

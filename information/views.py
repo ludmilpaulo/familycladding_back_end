@@ -1,4 +1,6 @@
 from rest_framework import generics
+from django.core.cache import cache
+from django.db.models import Prefetch
 from .models import Image, Carousel, AboutUs, Why_Choose_Us, Team, Contact
 from .serializers import ImageSerializer, CarouselSerializer, AboutUsSerializer, WhyChooseUsSerializer, TeamSerializer, ContactSerializer
 
@@ -8,20 +10,48 @@ class ImageListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = ImageSerializer
 
 class CarouselListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Carousel.objects.all()
     serializer_class = CarouselSerializer
+    
+    def get_queryset(self):
+        cache_key = 'carousel_list'
+        queryset = cache.get(cache_key)
+        if queryset is None:
+            queryset = Carousel.objects.prefetch_related('image').all()
+            cache.set(cache_key, queryset, 300)  # Cache for 5 minutes
+        return queryset
 
 class AboutUsListCreateAPIView(generics.ListCreateAPIView):
-    queryset = AboutUs.objects.all()
     serializer_class = AboutUsSerializer
+    
+    def get_queryset(self):
+        cache_key = 'aboutus_list'
+        queryset = cache.get(cache_key)
+        if queryset is None:
+            queryset = AboutUs.objects.all()
+            cache.set(cache_key, queryset, 600)  # Cache for 10 minutes
+        return queryset
 
 class WhyChooseUsListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Why_Choose_Us.objects.all()
     serializer_class = WhyChooseUsSerializer
+    
+    def get_queryset(self):
+        cache_key = 'whychooseus_list'
+        queryset = cache.get(cache_key)
+        if queryset is None:
+            queryset = Why_Choose_Us.objects.all()
+            cache.set(cache_key, queryset, 600)  # Cache for 10 minutes
+        return queryset
 
 class TeamListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Team.objects.all()
     serializer_class = TeamSerializer
+    
+    def get_queryset(self):
+        cache_key = 'team_list'
+        queryset = cache.get(cache_key)
+        if queryset is None:
+            queryset = Team.objects.all()
+            cache.set(cache_key, queryset, 600)  # Cache for 10 minutes
+        return queryset
 
 class ContactListCreateAPIView(generics.ListCreateAPIView):
     queryset = Contact.objects.all()
